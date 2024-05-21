@@ -1,6 +1,5 @@
 package Biblioteca_Final_POO;
 
-
 public class LibroReservado extends Libro {
     private String solicitanteCodigo;
     private String solicitanteNombre;
@@ -19,4 +18,3 @@ public class LibroReservado extends Libro {
         return solicitanteNombre;
     }
 }
-

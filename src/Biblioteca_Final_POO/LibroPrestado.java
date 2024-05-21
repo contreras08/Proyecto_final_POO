@@ -1,6 +1,5 @@
 package Biblioteca_Final_POO;
 
-
 public class LibroPrestado extends Libro {
     private String solicitanteCodigo;
     private String solicitanteNombre;

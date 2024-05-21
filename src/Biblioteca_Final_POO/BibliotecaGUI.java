@@ -14,6 +14,7 @@ public class BibliotecaGUI extends JFrame {
     private JTextField solicitanteCodigoField, solicitanteNombreField;
     private JTextField loanBookIdField, loanUserIdField, loanDateField, returnDateField;
     private JTextField reservationBookIdField, reservationUserIdField, reservationDateField, reservationIdField;
+    private JTextField returnBookIdField, returnSolicitanteCodigoField, returnSolicitanteNombreField;
     private JTextArea resultArea;
     private Usuario usuarioActual;
 
@@ -27,7 +28,7 @@ public class BibliotecaGUI extends JFrame {
     }
 
     private void showLoginPanel() {
-        JPanel loginPanel = new JPanel(new GridLayout(3, 2));
+        JPanel loginPanel = new JPanel(new GridLayout(15, 2));
 
         loginPanel.add(new JLabel("Email:"));
         loginEmailField = new JTextField();
@@ -55,6 +56,7 @@ public class BibliotecaGUI extends JFrame {
         tabbedPane.addTab("Libros", createBookPanel());
         tabbedPane.addTab("Préstamos", createLoanPanel());
         tabbedPane.addTab("Reservas", createReservationPanel());
+        tabbedPane.addTab("Devoluciones", createReturnPanel());
 
         resultArea = new JTextArea(10, 50);  // Limita la altura del área de texto
         resultArea.setEditable(false);
@@ -208,14 +210,10 @@ public class BibliotecaGUI extends JFrame {
         panel.add(new JScrollPane(inputPanel), BorderLayout.CENTER);
 
         // Buttons for loan operations
-        JPanel buttonPanel = new JPanel(new GridLayout(2, 1));
+        JPanel buttonPanel = new JPanel(new GridLayout(1, 1));
         JButton prestarButton = new JButton("Prestar Libro");
         prestarButton.addActionListener(new PrestarLibroAction());
         buttonPanel.add(prestarButton);
-
-        JButton devolverButton = new JButton("Devolver Libro");
-        devolverButton.addActionListener(new DevolverLibroAction());
-        buttonPanel.add(devolverButton);
 
         panel.add(buttonPanel, BorderLayout.SOUTH);
 
@@ -255,6 +253,37 @@ public class BibliotecaGUI extends JFrame {
         JButton reservarButton = new JButton("Reservar Libro");
         reservarButton.addActionListener(new ReservarLibroAction());
         buttonPanel.add(reservarButton);
+
+        panel.add(buttonPanel, BorderLayout.SOUTH);
+
+        return panel;
+    }
+
+    private JPanel createReturnPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+
+        JPanel inputPanel = new JPanel(new GridLayout(6, 2));
+
+        // Return input fields
+        inputPanel.add(new JLabel("ID del Libro:"));
+        returnBookIdField = new JTextField();
+        inputPanel.add(returnBookIdField);
+
+        inputPanel.add(new JLabel("Código del Solicitante:"));
+        returnSolicitanteCodigoField = new JTextField();
+        inputPanel.add(returnSolicitanteCodigoField);
+
+        inputPanel.add(new JLabel("Nombre del Solicitante:"));
+        returnSolicitanteNombreField = new JTextField();
+        inputPanel.add(returnSolicitanteNombreField);
+
+        panel.add(new JScrollPane(inputPanel), BorderLayout.CENTER);
+
+        // Button for return operation
+        JPanel buttonPanel = new JPanel(new GridLayout(1, 1));
+        JButton devolverButton = new JButton("Devolver Libro");
+        devolverButton.addActionListener(new DevolverLibroAction());
+        buttonPanel.add(devolverButton);
 
         panel.add(buttonPanel, BorderLayout.SOUTH);
 
@@ -576,228 +605,6 @@ public class BibliotecaGUI extends JFrame {
     }
 
     // ActionListener classes for Loans
-    private class ConsultarPrestamoAction implements ActionListener {
-        public void actionPerformed(ActionEvent e) {
-            try {
-                int id = Integer.parseInt(loanBookIdField.getText());
-                String result = consultarPrestamo(id);
-                resultArea.setText(result);
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(BibliotecaGUI.this, "ID del libro no válido.");
-            }
-        }
-
-        private String consultarPrestamo(int id) {
-            try (Connection conn = ConexionBD.conectar();
-                 PreparedStatement stmt = conn.prepareStatement("SELECT * FROM prestamos WHERE id = ?")) {
-                stmt.setInt(1, id);
-                ResultSet rs = stmt.executeQuery();
-                if (rs.next()) {
-                    int libroId = rs.getInt("libro_id");
-                    int usuarioId = rs.getInt("usuario_id");
-                    Date fechaPrestamo = rs.getDate("fecha_prestamo");
-                    Date fechaDevolucion = rs.getDate("fecha_devolucion");
-                    return "ID: " + id + "\nID del Libro: " + libroId + "\nID del Usuario: " + usuarioId +
-                            "\nFecha del Préstamo: " + fechaPrestamo + "\nFecha de Devolución: " + fechaDevolucion;
-                } else {
-                    return "Préstamo no encontrado.";
-                }
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-                return "Error al consultar el préstamo.";
-            }
-        }
-    }
-
-    private class ActualizarPrestamoAction implements ActionListener {
-        public void actionPerformed(ActionEvent e) {
-            try {
-                int id = Integer.parseInt(loanBookIdField.getText());
-                int libroId = Integer.parseInt(loanBookIdField.getText());
-                int usuarioId = Integer.parseInt(loanUserIdField.getText());
-                Date fechaPrestamo = Date.valueOf(loanDateField.getText());
-                Date fechaDevolucion = Date.valueOf(returnDateField.getText());
-                boolean success = actualizarPrestamo(id, libroId, usuarioId, fechaPrestamo, fechaDevolucion);
-                if (success) {
-                    resultArea.setText("Préstamo actualizado correctamente.");
-                } else {
-                    resultArea.setText("Error al actualizar el préstamo.");
-                }
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(BibliotecaGUI.this, "Datos de préstamo no válidos.");
-            }
-        }
-
-        private boolean actualizarPrestamo(int id, int libroId, int usuarioId, Date fechaPrestamo, Date fechaDevolucion) {
-            try (Connection conn = ConexionBD.conectar();
-                 PreparedStatement stmt = conn.prepareStatement("UPDATE prestamos SET libro_id = ?, usuario_id = ?, fecha_prestamo = ?, fecha_devolucion = ? WHERE id = ?")) {
-                stmt.setInt(1, libroId);
-                stmt.setInt(2, usuarioId);
-                stmt.setDate(3, fechaPrestamo);
-                stmt.setDate(4, fechaDevolucion);
-                stmt.setInt(5, id);
-                int rowsAffected = stmt.executeUpdate();
-                return rowsAffected > 0;
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-                return false;
-            }
-        }
-    }
-
-    private class EliminarPrestamoAction implements ActionListener {
-        public void actionPerformed(ActionEvent e) {
-            try {
-                int id = Integer.parseInt(loanBookIdField.getText());
-                boolean success = eliminarPrestamo(id);
-                if (success) {
-                    resultArea.setText("Préstamo eliminado correctamente.");
-                } else {
-                    resultArea.setText("Error al eliminar el préstamo.");
-                }
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(BibliotecaGUI.this, "ID de préstamo no válido.");
-            }
-        }
-
-        private boolean eliminarPrestamo(int id) {
-            try (Connection conn = ConexionBD.conectar();
-                 PreparedStatement stmt = conn.prepareStatement("DELETE FROM prestamos WHERE id = ?")) {
-                stmt.setInt(1, id);
-                int rowsAffected = stmt.executeUpdate();
-                return rowsAffected > 0;
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-                return false;
-            }
-        }
-    }
-
-    private class AgregarPrestamoAction implements ActionListener {
-        public void actionPerformed(ActionEvent e) {
-            try {
-                int libroId = Integer.parseInt(loanBookIdField.getText());
-                int usuarioId = Integer.parseInt(loanUserIdField.getText());
-                String solicitanteCodigo = solicitanteCodigoField.getText();
-                String solicitanteNombre = solicitanteNombreField.getText();
-                ConexionBD.prestarLibro(libroId, usuarioId, solicitanteCodigo, solicitanteNombre);
-                resultArea.setText("Préstamo agregado correctamente.");
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(BibliotecaGUI.this, "Datos de préstamo no válidos.");
-            }
-        }
-    }
-
-    // ActionListener classes for Reservations
-    private class ConsultarReservaAction implements ActionListener {
-        public void actionPerformed(ActionEvent e) {
-            try {
-                int id = Integer.parseInt(reservationIdField.getText());
-                String result = consultarReserva(id);
-                resultArea.setText(result);
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(BibliotecaGUI.this, "ID de reserva no válido.");
-            }
-        }
-
-        private String consultarReserva(int id) {
-            try (Connection conn = ConexionBD.conectar();
-                 PreparedStatement stmt = conn.prepareStatement("SELECT * FROM reservas WHERE id = ?")) {
-                stmt.setInt(1, id);
-                ResultSet rs = stmt.executeQuery();
-                if (rs.next()) {
-                    int libroId = rs.getInt("libro_id");
-                    int usuarioId = rs.getInt("usuario_id");
-                    Date fechaReserva = rs.getDate("fecha_reserva");
-                    return "ID: " + id + "\nID del Libro: " + libroId + "\nID del Usuario: " + usuarioId +
-                            "\nFecha de la Reserva: " + fechaReserva;
-                } else {
-                    return "Reserva no encontrada.";
-                }
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-                return "Error al consultar la reserva.";
-            }
-        }
-    }
-
-    private class ActualizarReservaAction implements ActionListener {
-        public void actionPerformed(ActionEvent e) {
-            try {
-                int id = Integer.parseInt(reservationIdField.getText());
-                int libroId = Integer.parseInt(reservationBookIdField.getText());
-                int usuarioId = Integer.parseInt(reservationUserIdField.getText());
-                Date fechaReserva = Date.valueOf(reservationDateField.getText());
-                boolean success = actualizarReserva(id, libroId, usuarioId, fechaReserva);
-                if (success) {
-                    resultArea.setText("Reserva actualizada correctamente.");
-                } else {
-                    resultArea.setText("Error al actualizar la reserva.");
-                }
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(BibliotecaGUI.this, "Datos de reserva no válidos.");
-            }
-        }
-
-        private boolean actualizarReserva(int id, int libroId, int usuarioId, Date fechaReserva) {
-            try (Connection conn = ConexionBD.conectar();
-                 PreparedStatement stmt = conn.prepareStatement("UPDATE reservas SET libro_id = ?, usuario_id = ?, fecha_reserva = ? WHERE id = ?")) {
-                stmt.setInt(1, libroId);
-                stmt.setInt(2, usuarioId);
-                stmt.setDate(3, fechaReserva);
-                stmt.setInt(4, id);
-                int rowsAffected = stmt.executeUpdate();
-                return rowsAffected > 0;
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-                return false;
-            }
-        }
-    }
-
-    private class EliminarReservaAction implements ActionListener {
-        public void actionPerformed(ActionEvent e) {
-            try {
-                int id = Integer.parseInt(reservationIdField.getText());
-                boolean success = eliminarReserva(id);
-                if (success) {
-                    resultArea.setText("Reserva eliminada correctamente.");
-                } else {
-                    resultArea.setText("Error al eliminar la reserva.");
-                }
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(BibliotecaGUI.this, "ID de reserva no válido.");
-            }
-        }
-
-        private boolean eliminarReserva(int id) {
-            try (Connection conn = ConexionBD.conectar();
-                 PreparedStatement stmt = conn.prepareStatement("DELETE FROM reservas WHERE id = ?")) {
-                stmt.setInt(1, id);
-                int rowsAffected = stmt.executeUpdate();
-                return rowsAffected > 0;
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-                return false;
-            }
-        }
-    }
-
-    private class AgregarReservaAction implements ActionListener {
-        public void actionPerformed(ActionEvent e) {
-            try {
-                int libroId = Integer.parseInt(reservationBookIdField.getText());
-                int usuarioId = Integer.parseInt(reservationUserIdField.getText());
-                String solicitanteCodigo = solicitanteCodigoField.getText();
-                String solicitanteNombre = solicitanteNombreField.getText();
-                ConexionBD.reservarLibro(libroId, usuarioId, solicitanteCodigo, solicitanteNombre);
-                resultArea.setText("Reserva agregada correctamente.");
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(BibliotecaGUI.this, "Datos de reserva no válidos.");
-            }
-        }
-    }
-
     private class PrestarLibroAction implements ActionListener {
         public void actionPerformed(ActionEvent e) {
             try {
@@ -813,12 +620,13 @@ public class BibliotecaGUI extends JFrame {
         }
     }
 
+    // ActionListener classes for Returns
     private class DevolverLibroAction implements ActionListener {
         public void actionPerformed(ActionEvent e) {
             try {
-                int libroId = Integer.parseInt(loanBookIdField.getText());
-                String solicitanteCodigo = solicitanteCodigoField.getText();
-                String solicitanteNombre = solicitanteNombreField.getText();
+                int libroId = Integer.parseInt(returnBookIdField.getText());
+                String solicitanteCodigo = returnSolicitanteCodigoField.getText();
+                String solicitanteNombre = returnSolicitanteNombreField.getText();
                 ConexionBD.devolverLibro(libroId, solicitanteCodigo, solicitanteNombre);
                 resultArea.setText("Intento de devolución realizado.");
             } catch (NumberFormatException ex) {

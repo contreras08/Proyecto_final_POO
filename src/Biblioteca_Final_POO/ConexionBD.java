@@ -147,7 +147,8 @@ public class ConexionBD {
     }
 
     private static boolean puedePrestar(int libroId, String solicitanteCodigo, String solicitanteNombre) {
-        String sql = "SELECT estado, solicitante_codigo, solicitante_nombre FROM libros l LEFT JOIN reservas r ON l.id = r.libro_id WHERE l.id = ?";
+        String sql = "SELECT l.estado, r.solicitante_codigo, r.solicitante_nombre " +
+                     "FROM libros l LEFT JOIN reservas r ON l.id = r.libro_id WHERE l.id = ?";
         try (Connection conn = conectar(); PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, libroId);
             ResultSet rs = stmt.executeQuery();
@@ -155,9 +156,13 @@ public class ConexionBD {
                 String estado = rs.getString("estado");
                 String codigoReserva = rs.getString("solicitante_codigo");
                 String nombreReserva = rs.getString("solicitante_nombre");
-                if ("disponible".equalsIgnoreCase(estado) || 
-                    ("reservado".equalsIgnoreCase(estado) && solicitanteCodigo.equals(codigoReserva) && solicitanteNombre.equals(nombreReserva))) {
+                if ("disponible".equalsIgnoreCase(estado)) {
                     return true;
+                }
+                if ("reservado".equalsIgnoreCase(estado)) {
+                    if (solicitanteCodigo.equals(codigoReserva) && solicitanteNombre.equals(nombreReserva)) {
+                        return true;
+                    }
                 }
             }
         } catch (SQLException e) {
@@ -267,4 +272,3 @@ public class ConexionBD {
         return false;
     }
 }
-
