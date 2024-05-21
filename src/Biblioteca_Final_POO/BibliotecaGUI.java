@@ -120,7 +120,7 @@ public class BibliotecaGUI extends JFrame {
     private JPanel createBookPanel() {
         JPanel panel = new JPanel(new BorderLayout());
 
-        JPanel inputPanel = new JPanel(new GridLayout(12, 2));
+        JPanel inputPanel = new JPanel(new GridLayout(6, 2));
 
         // Book input fields
         inputPanel.add(new JLabel("ID del Libro:"));
@@ -143,58 +143,30 @@ public class BibliotecaGUI extends JFrame {
         bookStateField = new JTextField();
         inputPanel.add(bookStateField);
 
-        // Soliciting user details
-        inputPanel.add(new JLabel("Código del Solicitante:"));
-        solicitanteCodigoField = new JTextField();
-        inputPanel.add(solicitanteCodigoField);
-
-        inputPanel.add(new JLabel("Nombre del Solicitante:"));
-        solicitanteNombreField = new JTextField();
-        inputPanel.add(solicitanteNombreField);
-
         panel.add(new JScrollPane(inputPanel), BorderLayout.CENTER);
 
         // Buttons for book operations
-        JPanel buttonPanel = new JPanel(new GridLayout(3, 2));
-        JButton consultarButton = new JButton("Consultar");
-        consultarButton.addActionListener(new ConsultarLibroAction());
-        buttonPanel.add(consultarButton);
-
+        JPanel buttonPanel = new JPanel(new GridLayout(1, 5));
+        
         if (usuarioActual.getRol().equals("administrador")) {
-            JButton actualizarButton = new JButton("Actualizar");
-            actualizarButton.addActionListener(new ActualizarLibroAction());
-            buttonPanel.add(actualizarButton);
+            JButton agregarButton = new JButton("Agregar");
+            agregarButton.addActionListener(new AgregarLibroAction());
+            buttonPanel.add(agregarButton);
 
             JButton eliminarButton = new JButton("Eliminar");
             eliminarButton.addActionListener(new EliminarLibroAction());
             buttonPanel.add(eliminarButton);
-
-            JButton agregarButton = new JButton("Agregar");
-            agregarButton.addActionListener(new AgregarLibroAction());
-            buttonPanel.add(agregarButton);
         }
-
-        JButton prestarButton = new JButton("Prestar Libro");
-        prestarButton.addActionListener(new PrestarLibroAction());
-        buttonPanel.add(prestarButton);
-
-        JButton devolverButton = new JButton("Devolver Libro");
-        devolverButton.addActionListener(new DevolverLibroAction());
-        buttonPanel.add(devolverButton);
-
-        JButton reservarButton = new JButton("Reservar Libro");
-        reservarButton.addActionListener(new ReservarLibroAction());
-        buttonPanel.add(reservarButton);
 
         JButton listarDisponiblesButton = new JButton("Listar Disponibles");
         listarDisponiblesButton.addActionListener(new ListarLibrosDisponiblesAction());
         buttonPanel.add(listarDisponiblesButton);
 
-        JButton listarPrestadosButton = new JButton("Listar Prestados");
+        JButton listarPrestadosButton = new JButton("Listar Libros Prestados");
         listarPrestadosButton.addActionListener(new ListarLibrosPrestadosAction());
         buttonPanel.add(listarPrestadosButton);
 
-        JButton listarReservadosButton = new JButton("Listar Reservados");
+        JButton listarReservadosButton = new JButton("Listar Libros Reservados");
         listarReservadosButton.addActionListener(new ListarLibrosReservadosAction());
         buttonPanel.add(listarReservadosButton);
 
@@ -571,14 +543,16 @@ public class BibliotecaGUI extends JFrame {
 
     private class ListarLibrosPrestadosAction implements ActionListener {
         public void actionPerformed(ActionEvent e) {
-            List<Libro> libros = ConexionBD.obtenerLibrosPorEstado("prestado");
+            List<LibroPrestado> libros = ConexionBD.obtenerLibrosPrestados();
             StringBuilder result = new StringBuilder("Libros Prestados:\n");
-            for (Libro libro : libros) {
+            for (LibroPrestado libro : libros) {
                 result.append("ID: ").append(libro.getId())
                       .append(", Título: ").append(libro.getTitulo())
                       .append(", Autor: ").append(libro.getAutor())
                       .append(", Editorial: ").append(libro.getEditorial())
-                      .append(", Estado: ").append(libro.getEstado()).append("\n");
+                      .append(", Estado: ").append(libro.getEstado())
+                      .append(", Solicitante Código: ").append(libro.getSolicitanteCodigo())
+                      .append(", Solicitante Nombre: ").append(libro.getSolicitanteNombre()).append("\n");
             }
             resultArea.setText(result.toString());
         }
@@ -586,14 +560,16 @@ public class BibliotecaGUI extends JFrame {
 
     private class ListarLibrosReservadosAction implements ActionListener {
         public void actionPerformed(ActionEvent e) {
-            List<Libro> libros = ConexionBD.obtenerLibrosPorEstado("reservado");
+            List<LibroReservado> libros = ConexionBD.obtenerLibrosReservados();
             StringBuilder result = new StringBuilder("Libros Reservados:\n");
-            for (Libro libro : libros) {
+            for (LibroReservado libro : libros) {
                 result.append("ID: ").append(libro.getId())
                       .append(", Título: ").append(libro.getTitulo())
                       .append(", Autor: ").append(libro.getAutor())
                       .append(", Editorial: ").append(libro.getEditorial())
-                      .append(", Estado: ").append(libro.getEstado()).append("\n");
+                      .append(", Estado: ").append(libro.getEstado())
+                      .append(", Solicitante Código: ").append(libro.getSolicitanteCodigo())
+                      .append(", Solicitante Nombre: ").append(libro.getSolicitanteNombre()).append("\n");
             }
             resultArea.setText(result.toString());
         }
@@ -830,7 +806,7 @@ public class BibliotecaGUI extends JFrame {
                 String solicitanteCodigo = solicitanteCodigoField.getText();
                 String solicitanteNombre = solicitanteNombreField.getText();
                 ConexionBD.prestarLibro(libroId, usuarioId, solicitanteCodigo, solicitanteNombre);
-                resultArea.setText("Libro prestado correctamente.");
+                resultArea.setText("Intento de préstamo realizado.");
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(BibliotecaGUI.this, "Datos de préstamo no válidos.");
             }
@@ -841,9 +817,10 @@ public class BibliotecaGUI extends JFrame {
         public void actionPerformed(ActionEvent e) {
             try {
                 int libroId = Integer.parseInt(loanBookIdField.getText());
-                int usuarioId = Integer.parseInt(loanUserIdField.getText());
-                ConexionBD.devolverLibro(libroId, usuarioId);
-                resultArea.setText("Libro devuelto correctamente.");
+                String solicitanteCodigo = solicitanteCodigoField.getText();
+                String solicitanteNombre = solicitanteNombreField.getText();
+                ConexionBD.devolverLibro(libroId, solicitanteCodigo, solicitanteNombre);
+                resultArea.setText("Intento de devolución realizado.");
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(BibliotecaGUI.this, "Datos de devolución no válidos.");
             }
@@ -858,7 +835,7 @@ public class BibliotecaGUI extends JFrame {
                 String solicitanteCodigo = solicitanteCodigoField.getText();
                 String solicitanteNombre = solicitanteNombreField.getText();
                 ConexionBD.reservarLibro(libroId, usuarioId, solicitanteCodigo, solicitanteNombre);
-                resultArea.setText("Libro reservado correctamente.");
+                resultArea.setText("Reserva agregada correctamente.");
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(BibliotecaGUI.this, "Datos de reserva no válidos.");
             }
@@ -869,4 +846,3 @@ public class BibliotecaGUI extends JFrame {
         SwingUtilities.invokeLater(BibliotecaGUI::new);
     }
 }
-
