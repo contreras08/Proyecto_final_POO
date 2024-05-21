@@ -15,6 +15,7 @@ public class BibliotecaGUI extends JFrame {
     private JTextField loanBookIdField, loanUserIdField, loanDateField, returnDateField;
     private JTextField reservationBookIdField, reservationUserIdField, reservationDateField, reservationIdField;
     private JTextField returnBookIdField, returnSolicitanteCodigoField, returnSolicitanteNombreField;
+    private JTextField cancelReservationBookIdField, cancelReservationSolicitanteCodigoField, cancelReservationSolicitanteNombreField;
     private JTextArea resultArea;
     private Usuario usuarioActual;
 
@@ -28,7 +29,7 @@ public class BibliotecaGUI extends JFrame {
     }
 
     private void showLoginPanel() {
-        JPanel loginPanel = new JPanel(new GridLayout(15, 2));
+        JPanel loginPanel = new JPanel(new GridLayout(18, 2));
 
         loginPanel.add(new JLabel("Email:"));
         loginEmailField = new JTextField();
@@ -57,6 +58,7 @@ public class BibliotecaGUI extends JFrame {
         tabbedPane.addTab("Préstamos", createLoanPanel());
         tabbedPane.addTab("Reservas", createReservationPanel());
         tabbedPane.addTab("Devoluciones", createReturnPanel());
+        tabbedPane.addTab("Cancelar Reservación", createCancelReservationPanel());
 
         resultArea = new JTextArea(10, 50);  // Limita la altura del área de texto
         resultArea.setEditable(false);
@@ -159,6 +161,10 @@ public class BibliotecaGUI extends JFrame {
             eliminarButton.addActionListener(new EliminarLibroAction());
             buttonPanel.add(eliminarButton);
         }
+
+        JButton listarTodosButton = new JButton("Listar Todos");
+        listarTodosButton.addActionListener(new ListarTodosLosLibrosAction());
+        buttonPanel.add(listarTodosButton);
 
         JButton listarDisponiblesButton = new JButton("Listar Disponibles");
         listarDisponiblesButton.addActionListener(new ListarLibrosDisponiblesAction());
@@ -284,6 +290,37 @@ public class BibliotecaGUI extends JFrame {
         JButton devolverButton = new JButton("Devolver Libro");
         devolverButton.addActionListener(new DevolverLibroAction());
         buttonPanel.add(devolverButton);
+
+        panel.add(buttonPanel, BorderLayout.SOUTH);
+
+        return panel;
+    }
+
+    private JPanel createCancelReservationPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+
+        JPanel inputPanel = new JPanel(new GridLayout(6, 2));
+
+        // Cancel reservation input fields
+        inputPanel.add(new JLabel("ID del Libro:"));
+        cancelReservationBookIdField = new JTextField();
+        inputPanel.add(cancelReservationBookIdField);
+
+        inputPanel.add(new JLabel("Código del Solicitante:"));
+        cancelReservationSolicitanteCodigoField = new JTextField();
+        inputPanel.add(cancelReservationSolicitanteCodigoField);
+
+        inputPanel.add(new JLabel("Nombre del Solicitante:"));
+        cancelReservationSolicitanteNombreField = new JTextField();
+        inputPanel.add(cancelReservationSolicitanteNombreField);
+
+        panel.add(new JScrollPane(inputPanel), BorderLayout.CENTER);
+
+        // Button for cancel reservation operation
+        JPanel buttonPanel = new JPanel(new GridLayout(1, 1));
+        JButton cancelarButton = new JButton("Cancelar Reservación");
+        cancelarButton.addActionListener(new CancelarReservacionAction());
+        buttonPanel.add(cancelarButton);
 
         panel.add(buttonPanel, BorderLayout.SOUTH);
 
@@ -570,6 +607,21 @@ public class BibliotecaGUI extends JFrame {
         }
     }
 
+    private class ListarTodosLosLibrosAction implements ActionListener {
+        public void actionPerformed(ActionEvent e) {
+            List<Libro> libros = ConexionBD.listarTodosLosLibros();
+            StringBuilder result = new StringBuilder("Todos los Libros:\n");
+            for (Libro libro : libros) {
+                result.append("ID: ").append(libro.getId())
+                      .append(", Título: ").append(libro.getTitulo())
+                      .append(", Autor: ").append(libro.getAutor())
+                      .append(", Editorial: ").append(libro.getEditorial())
+                      .append(", Estado: ").append(libro.getEstado()).append("\n");
+            }
+            resultArea.setText(result.toString());
+        }
+    }
+
     private class ListarLibrosPrestadosAction implements ActionListener {
         public void actionPerformed(ActionEvent e) {
             List<LibroPrestado> libros = ConexionBD.obtenerLibrosPrestados();
@@ -631,6 +683,21 @@ public class BibliotecaGUI extends JFrame {
                 resultArea.setText("Intento de devolución realizado.");
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(BibliotecaGUI.this, "Datos de devolución no válidos.");
+            }
+        }
+    }
+
+    // ActionListener classes for Cancel Reservation
+    private class CancelarReservacionAction implements ActionListener {
+        public void actionPerformed(ActionEvent e) {
+            try {
+                int libroId = Integer.parseInt(cancelReservationBookIdField.getText());
+                String solicitanteCodigo = cancelReservationSolicitanteCodigoField.getText();
+                String solicitanteNombre = cancelReservationSolicitanteNombreField.getText();
+                ConexionBD.cancelarReservacion(libroId, solicitanteCodigo, solicitanteNombre);
+                resultArea.setText("Reservación cancelada.");
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(BibliotecaGUI.this, "Datos de cancelación no válidos.");
             }
         }
     }

@@ -84,6 +84,25 @@ public class ConexionBD {
         return libros;
     }
 
+    public static List<Libro> listarTodosLosLibros() {
+        List<Libro> libros = new ArrayList<>();
+        String sql = "SELECT * FROM libros";
+        try (Connection conn = conectar(); Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                int id = rs.getInt("id");
+                String titulo = rs.getString("titulo");
+                String autor = rs.getString("autor");
+                String editorial = rs.getString("editorial");
+                String estado = rs.getString("estado");
+                libros.add(new Libro(id, titulo, autor, editorial, estado));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return libros;
+    }
+
+
     public static List<LibroPrestado> obtenerLibrosPrestados() {
         List<LibroPrestado> libros = new ArrayList<>();
         String sql = "SELECT l.id, l.titulo, l.autor, l.editorial, l.estado, p.solicitante_codigo, p.solicitante_nombre " +
@@ -210,6 +229,24 @@ public class ConexionBD {
             stmt.setString(4, solicitanteNombre);
             stmt.executeUpdate();
             actualizarEstadoLibro(libroId, "reservado");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void cancelarReservacion(int libroId, String solicitanteCodigo, String solicitanteNombre) {
+        String sql = "DELETE FROM reservas WHERE libro_id = ? AND solicitante_codigo = ? AND solicitante_nombre = ?";
+        try (Connection conn = conectar(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, libroId);
+            stmt.setString(2, solicitanteCodigo);
+            stmt.setString(3, solicitanteNombre);
+            int affectedRows = stmt.executeUpdate();
+            if (affectedRows > 0) {
+                actualizarEstadoLibro(libroId, "disponible");
+            } else {
+                System.out.println("No se encontró la reservación para cancelar.");
+                JOptionPane.showMessageDialog(null, "No se encontró la reservación para cancelar.");
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
